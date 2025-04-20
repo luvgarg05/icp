@@ -8,6 +8,12 @@ import io
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import os
 
+Labels = {
+    0 :'Bruise',
+    1 : 'Burn',
+    2 : 'Cut' ,
+    3 : 'Fracture' 
+}
 # Define your image model architecture
 class CNN(nn.Module):
     def __init__(self, num_classes=10):
@@ -60,8 +66,8 @@ def predict():
     with torch.no_grad():
         outputs = model(img_tensor)
         _, predicted_class = torch.max(outputs, 1)
-
-    return jsonify({"prediction": predicted_class.item()}), 200
+    predicted_class = Labels[predicted_class.item()]
+    return jsonify({"prediction": predicted_class}), 200
 
 @app.route("/chat", methods=["POST"])
 def chat():
