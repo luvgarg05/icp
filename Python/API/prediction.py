@@ -70,16 +70,29 @@ def chat():
         return jsonify({"error": "No message provided"}), 400
 
     input_text = data['message']
-    input_ids = chat_tokenizer.encode(input_text + chat_tokenizer.eos_token, return_tensors="pt")
+    chat_history = data.get('history', [])
+
+    # Reconstruct chat history
+    new_user_input_ids = chat_tokenizer.encode(input_text + chat_tokenizer.eos_token, return_tensors="pt")
+    bot_input_ids = new_user_input_ids
+
+    for past_message in chat_history:
+        encoded = chat_tokenizer.encode(past_message + chat_tokenizer.eos_token, return_tensors="pt")
+        bot_input_ids = torch.cat([bot_input_ids, encoded], dim=-1)
 
     chat_history_ids = chat_model.generate(
-        input_ids,
+        bot_input_ids,
         max_length=1000,
         pad_token_id=chat_tokenizer.eos_token_id
     )
 
-    response_text = chat_tokenizer.decode(chat_history_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
-    return jsonify({"response": response_text}), 200
+    response_text = chat_tokenizer.decode(chat_history_ids[:, bot_input_ids.shape[-1]:][0], skip_special_tokens=True)
+    full_history = chat_history + [input_text, response_text]
+
+    return jsonify({
+        "response": response_text,
+        "history": full_history
+    }), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
